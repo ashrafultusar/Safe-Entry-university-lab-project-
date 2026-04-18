@@ -1,10 +1,19 @@
 import ProfilePage from '@/components/profile/ProfilePage';
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
+const page = async () => {
+    const session = await auth();
 
-const page = () => {
+    
+    if (!session?.user) {
+        redirect("/login");
+    }
+
     return (
         <div>
-            <ProfilePage/>
+           
+            <ProfilePage userSession={session.user} />
         </div>
     );
 };
