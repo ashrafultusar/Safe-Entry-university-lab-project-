@@ -5,8 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, ShieldCheck } from "lucide-react";
 // এখানে একটি Server Action বা API তৈরি করতে হবে যা OTP চেক করবে
 // সহজ করার জন্য আপনি একটি API route `/api/verify-otp` তৈরি করতে পারেন
+import { Suspense } from "react";
 
-export default function VerifyOTP() {
+function VerifyOTPContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const [otp, setOtp] = useState("");
@@ -55,5 +56,17 @@ export default function VerifyOTP() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function VerifyOTP() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
+        <Loader2 className="animate-spin text-blue-600" size={40} />
+      </div>
+    }>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }
