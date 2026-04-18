@@ -25,7 +25,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         await connectDB();
         const user = await User.findOne({ email: credentials.email });
 
-        if (!user) throw new CustomError("No user found with this email.");
+        if (!user) throw new CustomError("Invalid credentials.");
 
         // --- OTP Verification Action ---
         if (credentials.action === "verify_otp") {
@@ -46,8 +46,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         if (!credentials?.password) return null;
 
-        if (!user) throw new CustomError("No user found with this email.");
-
         if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
           throw new CustomError(`LOCKED_${user.lockUntil.getTime()}`);
         }
@@ -67,7 +65,15 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             { email: user.email },
             { $set: { loginAttempts: newAttempts, lockUntil: lockUntil } }
           );
-          throw new CustomError(newAttempts >= 3 ? `LOCKED_${lockUntil?.getTime()}` : "Invalid password.");
+          throw new CustomError(newAttempts >= 3 ? `LOCKED_${lockUntil?.getTime()}` : "Invalid credentials.");
+        }
+
+        // --- SUCCESSFUL LOGIN: Reset attempts ---
+        if (user.loginAttempts > 0 || user.lockUntil) {
+          await User.updateOne(
+            { email: user.email },
+            { $set: { loginAttempts: 0, lockUntil: null } }
+          );
         }
 
         // --- New Device Login Detection ---

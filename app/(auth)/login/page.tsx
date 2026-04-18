@@ -13,12 +13,31 @@ const LoginPage = () => {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const router = useRouter();
 
+  // Local storage theke lock info load kora
+  useEffect(() => {
+    const lockedUntilStr = localStorage.getItem("safe_entry_lock_until");
+    if (lockedUntilStr) {
+      const remainingSeconds = Math.ceil((parseInt(lockedUntilStr) - Date.now()) / 1000);
+      if (remainingSeconds > 0) {
+        setLockoutTimer(remainingSeconds);
+      } else {
+        localStorage.removeItem("safe_entry_lock_until");
+      }
+    }
+  }, []);
+
   // কাউন্টডাউন টাইমার হ্যান্ডেলার (Brute-force protection)
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (lockoutTimer !== null && lockoutTimer > 0) {
       interval = setInterval(() => {
-        setLockoutTimer((prev) => (prev && prev > 1 ? prev - 1 : null));
+        setLockoutTimer((prev) => {
+          if (prev && prev <= 1) {
+            localStorage.removeItem("safe_entry_lock_until");
+            return null;
+          }
+          return prev && prev > 1 ? prev - 1 : null;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -63,18 +82,21 @@ const LoginPage = () => {
 
           if (remainingSeconds > 0) {
             setLockoutTimer(remainingSeconds);
+            localStorage.setItem("safe_entry_lock_until", unlockTimeStr);
             setError(null);
           } else {
             setError("Account temporarily locked. Please try again.");
           }
-        } 
+        }
         // ৩. সাধারণ ভুল পাসওয়ার্ড হ্যান্ডলিং
         else {
           const currentAttempts = failedAttempts + 1;
           setFailedAttempts(currentAttempts);
 
           if (currentAttempts >= 3) {
+            const unlockTimeMs = Date.now() + 20 * 1000;
             setLockoutTimer(20); // ২০ সেকেন্ড ব্লক
+            localStorage.setItem("safe_entry_lock_until", unlockTimeMs.toString());
             setFailedAttempts(0);
             setError(null);
           } else {
@@ -111,7 +133,7 @@ const LoginPage = () => {
 
         {/* Form Card */}
         <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 transition-all">
-          
+
           {/* Error Message Display */}
           {error && !lockoutTimer && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl flex items-center gap-3 text-red-600 dark:text-red-400 text-sm animate-in fade-in slide-in-from-top-2">
